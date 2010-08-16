@@ -101,6 +101,13 @@ class Parser:
                 line_split = line.split(' ')
                 self.add_score([int(i) for i in line_split], year)
                 self.add_score_timeline([int(i) for i in line_split], year)
+
+        maps_f = open('data/matches.pkl', 'wb')
+        pickle.dump(self.maps, maps_f)
+        maps_f.close()
+        score_timeline_f = open('data/score_timeline.pkl', 'wb')
+        pickle.dump(self.score_timeline, score_timeline_f)
+        score_timeline_f.close()
                 
                 
                 
