@@ -51,7 +51,7 @@ class Data:
 
         self.names = {65: '1. FC Köln',123: '1899 Hoffenheim',83: 'Arminia Bielefeld',6: 'Bayer Leverkusen',87: 'Bor. Mönchengladbach',7: 'Bor. Dortmund',91: 'Eintracht Frankfurt',93: 'Energie Cottbus',40: 'FC Bayern München',9: 'FC Schalke 04',100: 'Hamburger SV',55: 'Hannover 96',54: 'Hertha BSC',105: 'Karlsruher SC',16: 'VfB Stuttgart',129: 'VfL Bochum',131: 'VfL Wolfsburg',134: 'Werder Bremen',79: '1. FC Nürnberg',102: 'Hansa Rostock',107: 'MSV Duisburg',81: '1. FSV Mainz 05',23: 'Alemannia Aachen',76: '1. FC Kaiserslautern',112: 'SC Freiburg', 98: 'FC St. Pauli'}
 
-        self.eternal_ladder = {65: 159, 123: 175, 83: 181, 6: 260, 87: 165, 7: 244, 91: 185, 93: 167, 40: 355, 9: 306 ,100: 279, 55: 216, 54: 257, 105: 162, 16: 287, 129: 183, 131: 242, 134: 306, 79: 191, 102: 150, 107: 146, 81: 175, 23: 154, 76: 165, 112: 138, 98: 100}
+        self.eternal_ladder = {65: 159, 123: 175, 83: 181, 6: 260, 87: 165, 7: 244, 91: 185, 93: 167, 40: 355, 9: 306 ,100: 279, 55: 216, 54: 257, 105: 162, 16: 287, 129: 183, 131: 242, 134: 306, 79: 191, 102: 150, 107: 146, 81: 175, 23: 154, 76: 165, 112: 138, 98: 145}
 
         self.unpickle()
 
@@ -158,7 +158,7 @@ class Data:
             tl = []
         return tl
 
-    def get_trend(self, team, timespan=3, year=2010):
+    def get_trend_ratio(self, team, timespan=3, year=2010):
         games = self.get_timeline(team, year)[-timespan:]
         if not games:
             games = self.get_timeline(team, year-1)[-timespan:]
@@ -169,20 +169,24 @@ class Data:
             elif game[0]==game[1]:
                 points+=1
 
-        ratio =  points / float(timespan)
+        return  points / float(timespan)
+    
+    def get_trend(self, team, timespan=3, year=2010, threshold=0.5):
+        ratio = self.get_trend_ratio(team, timespan, year)
 
         # TODO ratio threshold could be optimized
-        if ratio >= 1.5:
+        if ratio >= (1.0+threshold):
             return 1
-        elif ratio < 1.5 and ratio >= 1.0:
+        elif ratio < (1.0+threshold) and ratio >= (0.5+threshold):
             return 0
         else:
             return -1
+       
 
     # entweder reines ergebnis oder 1, 0, -1 (aus sicht des heimteams)
-    def compare_teams(self, team1, team2, timespan=3):
-        r1 = self.get_trend(team1, timespan, self.current_year)
-        r2 = self.get_trend(team2, timespan, self.current_year)
+    def compare_teams(self, team1, team2, timespan=3, threshold=0.5):
+        r1 = self.get_trend(team1, timespan, self.current_year, threshold)
+        r2 = self.get_trend(team2, timespan, self.current_year, threshold)
         if r1 > r2:
             return 1
         elif r1 == r2:
@@ -190,7 +194,15 @@ class Data:
         else:
             return -1
 
-
+    def eternal_diff(self, team1, team2, diff_thresh=50):
+        #sorted(d.eternal_ladder.items(), key=operator.itemgetter(1), reverse=True)
+        diff = self.eternal_ladder[team1] - self.eternal_ladder[team2]
+        if diff > diff_thresh:
+            return 1
+        elif diff < (-1*diff_thresh):
+            return -1
+        else:
+            return 0
 
 class Parser:
     def __init__(self):
