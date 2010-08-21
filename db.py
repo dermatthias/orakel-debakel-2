@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 import sys
 import codecs
+import random
 import cPickle as pickle
 from suds.client import Client
 from operator import itemgetter
+
 
 '''
 TODO:
@@ -169,24 +171,24 @@ class Data:
             elif game[0]==game[1]:
                 points+=1
 
-        return  points / float(timespan)
+        return points / float(timespan)
     
     def get_trend(self, team, timespan=3, year=2010, threshold=0.5):
         ratio = self.get_trend_ratio(team, timespan, year)
 
         # TODO ratio threshold could be optimized
         if ratio >= (1.0+threshold):
-            return 1
-        elif ratio < (1.0+threshold) and ratio >= (0.5+threshold):
-            return 0
+            return (1, ratio)
+        elif ratio < (1.0+threshold) and ratio >= (0.4+threshold):
+            return (0, ratio)
         else:
-            return -1
+            return (-1, ratio)
        
 
     # entweder reines ergebnis oder 1, 0, -1 (aus sicht des heimteams)
     def compare_teams(self, team1, team2, timespan=3, threshold=0.5):
-        r1 = self.get_trend(team1, timespan, self.current_year, threshold)
-        r2 = self.get_trend(team2, timespan, self.current_year, threshold)
+        r1 = self.get_trend(team1, timespan, self.current_year, threshold)[0]
+        r2 = self.get_trend(team2, timespan, self.current_year, threshold)[0]
         if r1 > r2:
             return 1
         elif r1 == r2:
@@ -204,6 +206,44 @@ class Data:
         else:
             return 0
 
+    # common results of both teams
+    def pairscores(self, team1, team2):
+        all_games = []
+        for year, matches in self.cross_table.iteritems():
+            try:
+                res = matches[team1][team2]
+                for r in res:
+                    all_games.append(r)
+            except:
+                pass
+        return all_games
+
+    def pairaverage(self, team1, team2):
+        s1, s2 = 0, 0
+        scores = self.pairscores(team1, team2)
+        for match in scores:
+            s1 += match[0]
+            s2 += match[1]
+        s1 = s1 / float(len(scores))
+        s2 = s2/ float(len(scores))
+        return [s1, s2]
+
+    def median(self, scorelist):
+        d = {}
+        for i in scorelist:
+            d.setdefault(tuple(i), 0)
+            d[tuple(i)] +=1
+
+        sorted_by_goals = sorted(d.items(), key=itemgetter(1), reverse=True)
+        best_count = sorted_by_goals[0][1]
+        candidates = []
+        for e in sorted_by_goals:
+            if e[1] == best_count:
+                candidates.append(e)
+
+        res = random.sample(candidates,1)
+        return res[0]
+    
 class Parser:
     def __init__(self):
         meta = Meta()
