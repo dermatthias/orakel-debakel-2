@@ -1,1 +1,5 @@
-suds/
+.gitignore
+suds
+judge-data
+orakeldebakel2
+*.pyc
