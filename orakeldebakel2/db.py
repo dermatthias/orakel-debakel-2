@@ -2,8 +2,18 @@
 # -*- coding: utf-8 -*-
 import sys
 import codecs
+import random
 import cPickle as pickle
+from suds.client import Client
 from operator import itemgetter
+
+
+'''
+TODO:
+ - create ladder for current season
+ - use eternal ladder?
+ - daten der aufsteiger aus 2. liga!!!
+'''
 
 class Meta:
     '''
@@ -166,18 +176,19 @@ class Data:
     def get_trend(self, team, timespan=3, year=2010, threshold=0.5):
         ratio = self.get_trend_ratio(team, timespan, year)
 
+        # TODO ratio threshold could be optimized
         if ratio >= (1.0+threshold):
-            return 1
-        elif ratio < (1.0+threshold) and ratio >= (0.5+threshold):
-            return 0
+            return (1, ratio)
+        elif ratio < (1.0+threshold) and ratio >= (0.4+threshold):
+            return (0, ratio)
         else:
-            return -1
+            return (-1, ratio)
        
 
     # entweder reines ergebnis oder 1, 0, -1 (aus sicht des heimteams)
     def compare_teams(self, team1, team2, timespan=3, threshold=0.5):
-        r1 = self.get_trend(team1, timespan, self.current_year, threshold)
-        r2 = self.get_trend(team2, timespan, self.current_year, threshold)
+        r1 = self.get_trend(team1, timespan, self.current_year, threshold)[0]
+        r2 = self.get_trend(team2, timespan, self.current_year, threshold)[0]
         if r1 > r2:
             return 1
         elif r1 == r2:
@@ -195,6 +206,62 @@ class Data:
         else:
             return 0
 
+    # common results of both teams
+    def pairscores(self, team1, team2):
+        all_games = []
+        for year, matches in self.cross_table.iteritems():
+            try:
+                res = matches[team1][team2]
+                for r in res:
+                    all_games.append(r)
+            except:
+                pass
+        return all_games    
+
+    def pairaverage(self, team1, team2):
+        s1, s2 = 0, 0
+        scores = self.pairscores(team1, team2)
+        for match in scores:
+            s1 += match[0]
+            s2 += match[1]
+        if len(scores):
+            s1 = s1 / float(len(scores))
+            s2 = s2/ float(len(scores))
+        else:
+            s1 = 0
+            s2 = 0
+
+        return [s1, s2]    
+
+    def medianlist(self, scorelist):
+        d = {}
+        for i in scorelist:
+            d.setdefault(tuple(i), 0)
+            d[tuple(i)] +=1
+
+        sorted_by_goals = sorted(d.items(), key=itemgetter(1), reverse=True)
+        best_count = sorted_by_goals[0][1]
+        candidates = []
+        for e in sorted_by_goals:
+            if e[1] == best_count:
+                candidates.append(e)
+
+        return candidates
+
+    def medianlist_all(self, scorelist):
+        d = {}
+        for i in scorelist:
+            d.setdefault(tuple(i), 0)
+            d[tuple(i)] +=1
+
+        return sorted(d.items(), key=itemgetter(1), reverse=True)    
+
+    def median(self, scorelist):
+        candidates =  self.medianlist(scorelist)
+        # take the smallest one
+        res = sorted(candidates)
+        return res[0]
+    
 class Parser:
     def __init__(self):
         meta = Meta()
@@ -240,4 +307,31 @@ class Parser:
         score_timeline_f = open(self.timeline_file, 'wb')
         pickle.dump(self.score_timeline, score_timeline_f)
         score_timeline_f.close()
+
+
+class LigaDB:
+    def __init__(self):
+        self.url = 'http://www.openligadb.de/Webservices/Sportsdata.asmx?WSDL'
+        self.client = Client(self.url)
+        self.league = 'bl1'
+
+        meta = Meta()
+        self.years = meta.years
+
+    def getScores(self, year, min=1, max=34):
+        for st in range(min, max+1):
+            result = self.client.service.GetMatchdataByGroupLeagueSaison(st, self.league, year)
+            for spiel in result[0][:]:
+                id1 = spiel.idTeam1
+                pt1 = spiel.pointsTeam1
+                id2 = spiel.idTeam2
+                pt2 = spiel.pointsTeam2
+                if pt1 == -1:
+                    print str(id1) + ' ' + str(id2)
+                else:
+                    print str(id1) + ' ' + str(id2)  + ' ' + str(pt1) + ' ' + str(pt2)
+
+    def getAllScores(self):
+        for y in self.years:
+            self.getScores(y)
 

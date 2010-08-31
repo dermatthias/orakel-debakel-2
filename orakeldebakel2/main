@@ -12,10 +12,6 @@ DEBUG = 0
 
 class Main:
     def __init__(self):
-        # nur zum testen
-        self.parser = db.Parser()
-        self.parser.parse()
-
         self.pred = Predictor()
         self.data = db.Data()
 
@@ -147,15 +143,10 @@ class Predictor:
             av = self.d.pairaverage(t1,t2)
             diff = abs(av[0] - av[1])
             if diff >= th3:
-                median = self.d.median(self.d.pairscores(t1,t2))
-                if median:
-                    res = list(median[0])
-                    if DEBUG: print '\033[1;31m'+str(res)+'\033[1;m'
-                else:
-                    # todo: ergebnis überlegen
-                    res = [1,0]
+                res = list(self.d.median(self.d.pairscores(t1,t2))[0])
+                if DEBUG: print '\033[1;31m'+str(res)+'\033[1;m'
                 g1 = res[0]
-                g2 = res[1]                    
+                g2 = res[1]
             else:
                 #res = random.sample([[0,0], [1,1]], 1)[0]
                 #res = self.d.pairaverage(t1, t2)
