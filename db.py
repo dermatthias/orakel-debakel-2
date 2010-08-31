@@ -140,7 +140,7 @@ class Data:
             return home_sum / float(len(self.get_all_goals(team)))
         else:
             return 0
-        
+
     def get_awaygoals_sum(self, team):
         away_sum = sum([g[1] for g in self.get_all_goals(team)])
         return away_sum
@@ -172,7 +172,7 @@ class Data:
                 points+=1
 
         return points / float(timespan)
-    
+
     def get_trend(self, team, timespan=3, year=2010, threshold=0.5):
         ratio = self.get_trend_ratio(team, timespan, year)
 
@@ -183,7 +183,7 @@ class Data:
             return (0, ratio)
         else:
             return (-1, ratio)
-       
+
 
     # entweder reines ergebnis oder 1, 0, -1 (aus sicht des heimteams)
     def compare_teams(self, team1, team2, timespan=3, threshold=0.5):
@@ -224,26 +224,50 @@ class Data:
         for match in scores:
             s1 += match[0]
             s2 += match[1]
-        s1 = s1 / float(len(scores))
-        s2 = s2/ float(len(scores))
+        if len(scores):
+            s1 = s1 / float(len(scores))
+            s2 = s2 / float(len(scores))
+        else:
+            s1 = 0.0
+            s2 = 0.0
+
         return [s1, s2]
 
-    def median(self, scorelist):
+    def medianlist(self, scorelist):
         d = {}
         for i in scorelist:
             d.setdefault(tuple(i), 0)
             d[tuple(i)] +=1
 
         sorted_by_goals = sorted(d.items(), key=itemgetter(1), reverse=True)
-        best_count = sorted_by_goals[0][1]
-        candidates = []
-        for e in sorted_by_goals:
-            if e[1] == best_count:
-                candidates.append(e)
+        if sorted_by_goals:
+            best_count = sorted_by_goals[0][1]
+            candidates = []
+            for e in sorted_by_goals:
+                if e[1] == best_count:
+                    candidates.append(e)
+        else:
+            best_count = 0
+            candidates = []
+        return candidates
 
-        res = random.sample(candidates,1)
-        return res[0]
-    
+    def medianlist_all(self, scorelist):
+        d = {}
+        for i in scorelist:
+            d.setdefault(tuple(i), 0)
+            d[tuple(i)] +=1
+
+        return sorted(d.items(), key=itemgetter(1), reverse=True)
+
+    def median(self, scorelist):
+        candidates =  self.medianlist(scorelist)
+        # take the smallest one
+        if candidates:
+            res = sorted(candidates)
+            return res[0]
+        else:
+            return []
+
 class Parser:
     def __init__(self):
         meta = Meta()
